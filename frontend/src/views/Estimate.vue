@@ -47,29 +47,23 @@
           </div>
         </GlassCard>
 
-        <GlassCard title="因素贡献 Top" :hover="false">
-          <div v-if="loading" class="space-y-2">
+        <GlassCard title="因素贡献 TOP" :hover="false">
+          <div v-if="loading" class="space-y-4">
             <div v-for="i in 4" :key="i" class="skeleton h-12 rounded-xl"></div>
           </div>
-          <div v-else-if="result" class="space-y-2">
-            <div v-for="(f, idx) in result.factors?.slice(0, 4)" :key="idx" class="flex items-center justify-between rounded-lg border border-slate-200/60 bg-slate-50/50 p-2">
-              <div class="text-sm">{{ f.name }}</div>
-              <div class="text-xs" :class="f.impact_pct >= 0 ? 'text-lime-600' : 'text-sky-500'">
-                {{ f.impact_pct > 0 ? '+' : '' }}{{ f.impact_pct }}%
-              </div>
-          <div class="space-y-4">
+          <div v-else-if="result" class="space-y-4">
             <div v-for="f in result.factors" :key="f.name" class="group">
               <div class="flex items-center justify-between mb-2">
                 <span class="text-sm font-medium text-slate-700 group-hover:text-lime-600 transition-colors">{{ f.name }}</span>
-                <span class="text-xs" :class="f.value >= 0 ? 'text-sky-500' : 'text-lime-600'">
-                  {{ f.value > 0 ? '+' : '' }}{{ f.value }} 元/月
+                <span class="text-xs font-semibold" :class="f.value >= 0 ? 'text-lime-600' : 'text-sky-500'">
+                  {{ f.value > 0 ? '+' : '' }}{{ f.value }} 元
                 </span>
               </div>
               <div class="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
                 <div 
                   class="h-full transition-all duration-700 ease-out"
                   :style="{ width: Math.min(Math.abs(f.value) / 10, 100) + '%' }"
-                  :class="f.value >= 0 ? 'bg-sky-400' : 'bg-lime-400'"
+                  :class="f.value >= 0 ? 'bg-lime-400' : 'bg-sky-400'"
                 ></div>
               </div>
             </div>
@@ -78,10 +72,15 @@
         
         <GlassCard title="同区标杆对比" :hover="false">
           <div class="space-y-3">
-            <div v-for="b in result.benchmarks" :key="b.name" class="p-3 rounded-xl border border-slate-100 bg-slate-50/50 flex items-center justify-between hover:border-lime-200 transition-all">
-              <div class="text-sm text-slate-600">{{ b.name }}</div>
-              <div class="text-sm font-bold text-slate-800">¥{{ b.rent }} <span class="text-[10px] font-normal text-slate-400">/月</span></div>
-            </div>
+            <template v-if="loading">
+              <div v-for="i in 3" :key="i" class="skeleton h-10 rounded-xl"></div>
+            </template>
+            <template v-else-if="result">
+              <div v-for="b in result.benchmarks" :key="b.name" class="p-3 rounded-xl border border-slate-100 bg-slate-50/50 flex items-center justify-between hover:border-lime-200 transition-all">
+                <div class="text-sm text-slate-600">{{ b.name }}</div>
+                <div class="text-sm font-bold text-slate-800">¥{{ b.rent }} <span class="text-[10px] font-normal text-slate-400">/月</span></div>
+              </div>
+            </template>
             <div class="mt-6 p-4 rounded-xl bg-lime-50/50 border border-lime-100 italic text-xs text-lime-700 leading-relaxed">
               注：估值与风控用于辅助决策，建议结合实地勘察。青居智算致力于为毕业生扫清租房陷阱。
             </div>
@@ -115,15 +114,14 @@
 </template>
 
 <script setup>
-import { nextTick, onMounted, onUnmounted, reactive, ref, watch, computed } from 'vue'
+import { onMounted, reactive, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import * as echarts from 'echarts'
 
 import GlassCard from '../components/GlassCard.vue'
 import NeonButton from '../components/NeonButton.vue'
 import Field from '../components/Field.vue'
 import EmptyState from '../components/EmptyState.vue'
-import { estimate, getListing, estimateFairRent } from '../api/qingju'
+import { estimate, getListing } from '../api/qingju'
 import { useFavoritesStore } from '../stores/favorites'
 
 const route = useRoute()
@@ -132,8 +130,6 @@ const listingId = ref(route.query.listing_id || null)
 const listing = ref(null)
 const loading = ref(false)
 const result = ref(null)
-const chartEl = ref(null)
-let chart = null
 
 const form = reactive({
   asking_rent: 5200,
@@ -160,107 +156,11 @@ const toggleFavorite = () => {
   }))
 }
 
-/**
- * 渲染因素贡献瀑布图
- * NOTE: 使用堆叠柱状图模拟瀑布图效果，透明底部 + 正/负颜色区分
- */
-const renderWaterfallChart = () => {
-  if (!waterfallChartEl.value || !result.value?.factors?.length) return
-  if (!waterfallChart) waterfallChart = echarts.init(waterfallChartEl.value)
-
-  const factors = result.value.factors
-  const names = factors.map(f => f.name.replace(/（.*）/, ''))
-  const amounts = factors.map(f => f.amount || 0)
-
-  // 构建瀑布图数据：透明底部 + 可见部分
-  const baseValues = []
-  const visibleValues = []
-  let cumulative = 0
-
-  for (let i = 0; i < amounts.length; i++) {
-    const val = amounts[i]
-    if (val >= 0) {
-      baseValues.push(cumulative)
-      visibleValues.push(val)
-      cumulative += val
-    } else {
-      cumulative += val
-      baseValues.push(cumulative)
-      visibleValues.push(Math.abs(val))
-    }
-  }
-
-  waterfallChart.setOption({
-    backgroundColor: 'transparent',
-    tooltip: {
-      trigger: 'axis',
-      formatter: (params) => {
-        const name = params[0].name
-        const factor = factors.find(f => f.name.replace(/（.*）/, '') === name)
-        if (!factor) return name
-        return `${factor.name}<br/>影响: ${factor.impact_pct > 0 ? '+' : ''}${factor.impact_pct}%<br/>金额: ${factor.amount > 0 ? '+' : ''}${factor.amount}元`
-      }
-    },
-    grid: { left: 10, right: 16, top: 16, bottom: 36, containLabel: true },
-    xAxis: {
-      type: 'category',
-      data: names,
-      axisLine: { lineStyle: { color: 'rgba(0,0,0,0.1)' } },
-      axisLabel: { color: 'rgba(0,0,0,0.6)', fontSize: 10, rotate: 20 }
-    },
-    yAxis: {
-      type: 'value',
-      axisLine: { show: false },
-      splitLine: { lineStyle: { color: 'rgba(0,0,0,0.05)' } },
-      axisLabel: { color: 'rgba(0,0,0,0.5)', fontSize: 10, formatter: '{value}' }
-    },
-    series: [
-      {
-        // 透明底座
-        type: 'bar',
-        stack: 'waterfall',
-        data: baseValues,
-        itemStyle: { color: 'transparent' },
-        emphasis: { itemStyle: { color: 'transparent' } }
-      },
-      {
-        // 可见部分
-        type: 'bar',
-        stack: 'waterfall',
-        data: visibleValues.map((v, i) => ({
-          value: v,
-          itemStyle: {
-            color: amounts[i] >= 0
-              ? { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-                  colorStops: [{ offset: 0, color: '#84cc16' }, { offset: 1, color: '#10B981' }] }
-              : { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-                  colorStops: [{ offset: 0, color: '#F43F5E' }, { offset: 1, color: '#F59E0B' }] },
-            borderRadius: amounts[i] >= 0 ? [4, 4, 0, 0] : [0, 0, 4, 4]
-          }
-        })),
-        barWidth: '55%',
-        label: {
-          show: true,
-          position: 'top',
-          color: 'rgba(0,0,0,0.6)',
-          fontSize: 10,
-          formatter: (params) => {
-            const a = amounts[params.dataIndex]
-            return a > 0 ? `+${a}` : `${a}`
-          }
-        }
-      }
-    ]
-  })
-}
-
 const run = async () => {
   loading.value = true
   try {
     result.value = await estimate({ ...form })
     window.dispatchEvent(new CustomEvent('app:toast', { detail: { type: 'success', message: '估值已生成（含因素解释与对标样本）' } }))
-    await nextTick()
-    renderWaterfallChart()
   } finally {
     loading.value = false
   }
@@ -268,8 +168,6 @@ const run = async () => {
 
 const reset = () => {
   result.value = null
-  waterfallChart?.dispose()
-  waterfallChart = null
   form.asking_rent = 0
   form.area_sqm = 0
   form.floor = 0
@@ -281,7 +179,25 @@ const reset = () => {
   form.commute_minutes = 0
 }
 
-onUnmounted(() => {
-  waterfallChart?.dispose()
+onMounted(async () => {
+  if (listingId.value) {
+    try {
+      loading.value = true
+      listing.value = await getListing(listingId.value)
+      if (listing.value) {
+        form.asking_rent = listing.value.asking_rent || 0
+        form.area_sqm = listing.value.area_sqm || 0
+        form.floor = 10
+        form.total_floors = 18
+        form.orientation = listing.value.orientation || '南'
+        form.decoration = listing.value.decoration || '精装'
+        form.has_elevator = listing.value.has_elevator || false
+        form.subway_distance_m = listing.value.subway_distance_m || 500
+        form.commute_minutes = listing.value.commute_minutes || 30
+      }
+    } finally {
+      loading.value = false
+    }
+  }
 })
 </script>
