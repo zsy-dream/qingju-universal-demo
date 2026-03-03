@@ -131,8 +131,13 @@
         <div class="mt-3 flex gap-2">
           <NeonButton size="sm" variant="ghost" @click="goEstimate(listing.id)">估值</NeonButton>
           <NeonButton size="sm" variant="ghost" @click="goRisk(listing.id)">风控</NeonButton>
-          <NeonButton size="sm" variant="ghost" @click="favoritesStore.toggleFavorite(listing)">
-            {{ favoritesStore.isFavorite(listing.id) ? '不收藏' : '收藏' }}
+          <NeonButton 
+            size="sm" 
+            variant="ghost" 
+            @click="handleToggleFavorite(listing)"
+            :class="favoritesStore.isFavorite(listing.id) ? 'text-amber-500 bg-amber-50 border-amber-200' : ''"
+          >
+            {{ favoritesStore.isFavorite(listing.id) ? '★ 已收藏' : '☆ 收藏' }}
           </NeonButton>
           <NeonButton size="sm" variant="ghost" @click="deleteListing(listing.id)">删除</NeonButton>
         </div>
@@ -276,6 +281,13 @@ const goEstimate = (id) => {
 
 const goRisk = (id) => {
   router.push({ path: '/risk', query: { listing_id: id } })
+}
+
+const handleToggleFavorite = (listing) => {
+  const isNowFavorite = favoritesStore.toggleFavorite(listing)
+  const message = isNowFavorite ? '已加入收藏夹' : '已取消收藏'
+  const type = isNowFavorite ? 'success' : 'info'
+  window.dispatchEvent(new CustomEvent('app:toast', { detail: { type, message } }))
 }
 
 const deleteListing = async (id) => {
