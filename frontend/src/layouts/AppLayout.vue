@@ -25,7 +25,7 @@
         <nav class="hidden min-w-0 flex-1 items-center gap-0.5 overflow-x-auto md:flex">
           <NavLink to="/dashboard" label="驾驶舱" icon="📊" />
           <NavLink to="/listings" label="房源" icon="🏠" />
-          <NavLink to="/favorites" label="收藏" icon="⭐" />
+          <NavLink to="/favorites" label="收藏" icon="⭐" :badge="favoritesStore.favorites.length || null" />
           <NavLink to="/compare" label="对比" icon="⚖️" />
           <NavLink to="/estimate" label="估值" icon="💰" />
           <NavLink to="/risk" label="风控" icon="🛡️" />
@@ -39,11 +39,19 @@
           <NavLink to="/issues" label="问题" icon="⚠️" />
         </nav>
 
-        <!-- 导入数据按钮: 固定可见，左侧加一条竖线分隔 -->
         <div class="flex shrink-0 items-center gap-2 pl-2 border-l border-slate-200 ml-1">
-          <button @click="seedDemo" class="group relative flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition-all hover:border-lime-300 hover:text-lime-600 hover:shadow-sm active:bg-slate-50">
-            <span class="h-1.5 w-1.5 rounded-full bg-lime-500 group-hover:animate-pulse" />
-            导入数据
+          <button @click="seedDemo" :disabled="loadingDemo" class="group relative flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-all hover:border-lime-300 hover:text-lime-600 hover:shadow-sm active:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
+            <template v-if="loadingDemo">
+              <svg class="h-3 w-3 animate-spin text-lime-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              正在导入...
+            </template>
+            <template v-else>
+              <span class="h-1.5 w-1.5 rounded-full bg-lime-500 group-hover:animate-pulse" />
+              导入演示数据
+            </template>
           </button>
         </div>
       </div>
@@ -53,7 +61,7 @@
         <div class="flex overflow-x-auto mobile-nav-scroll gap-2 no-print">
           <NavLink to="/dashboard" label="驾驶舱" icon="📊" />
           <NavLink to="/listings" label="房源" icon="🏠" />
-          <NavLink to="/favorites" label="收藏" icon="⭐" />
+          <NavLink to="/favorites" label="收藏" icon="⭐" :badge="favoritesStore.favorites.length || null" />
           <NavLink to="/compare" label="对比" icon="⚖️" />
           <NavLink to="/estimate" label="估值" icon="💰" />
           <NavLink to="/risk" label="风控" icon="🛡️" />
@@ -96,6 +104,7 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import ToastHost from '../components/ToastHost.vue'
 import NavLink from '../components/NavLink.vue'
@@ -106,11 +115,18 @@ import {
   compareListings, calculateSplit,
   generateNegotiationScript, inspectContract
 } from '../api/qingju'
+import { useFavoritesStore } from '../stores/favorites'
 
 const router = useRouter()
+const favoritesStore = useFavoritesStore()
+const loadingDemo = ref(false)
 
 const seedDemo = async () => {
-  // 第1步：创建8套演示房源
+  if (loadingDemo.value) return
+  loadingDemo.value = true
+  
+  try {
+    // 第1步：创建8套演示房源
   const demoListings = [
     // 类型1: 杨浦溢价型
     { title: '杨浦·互联宝地地铁口精装一居', city: '上海', district: '杨浦', area_sqm: 35, layout: '1室1厅', floor: 12, total_floors: 24, orientation: '南', decoration: '精装', has_elevator: true, subway_distance_m: 180, commute_minutes: 18, asking_rent: 4800 },
@@ -305,6 +321,10 @@ const seedDemo = async () => {
     } 
   }))
   router.push('/listings')
+
+  } finally {
+    loadingDemo.value = false
+  }
 }
 </script>
 

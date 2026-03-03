@@ -57,19 +57,37 @@
               <div class="text-xs" :class="f.impact_pct >= 0 ? 'text-lime-600' : 'text-sky-500'">
                 {{ f.impact_pct > 0 ? '+' : '' }}{{ f.impact_pct }}%
               </div>
+          <div class="space-y-4">
+            <div v-for="f in result.factors" :key="f.name" class="group">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-slate-700 group-hover:text-lime-600 transition-colors">{{ f.name }}</span>
+                <span class="text-xs" :class="f.value >= 0 ? 'text-sky-500' : 'text-lime-600'">
+                  {{ f.value > 0 ? '+' : '' }}{{ f.value }} 元/月
+                </span>
+              </div>
+              <div class="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                <div 
+                  class="h-full transition-all duration-700 ease-out"
+                  :style="{ width: Math.min(Math.abs(f.value) / 10, 100) + '%' }"
+                  :class="f.value >= 0 ? 'bg-sky-400' : 'bg-lime-400'"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </GlassCard>
+        
+        <GlassCard title="同区标杆对比" :hover="false">
+          <div class="space-y-3">
+            <div v-for="b in result.benchmarks" :key="b.name" class="p-3 rounded-xl border border-slate-100 bg-slate-50/50 flex items-center justify-between hover:border-lime-200 transition-all">
+              <div class="text-sm text-slate-600">{{ b.name }}</div>
+              <div class="text-sm font-bold text-slate-800">¥{{ b.rent }} <span class="text-[10px] font-normal text-slate-400">/月</span></div>
+            </div>
+            <div class="mt-6 p-4 rounded-xl bg-lime-50/50 border border-lime-100 italic text-xs text-lime-700 leading-relaxed">
+              注：估值与风控用于辅助决策，建议结合实地勘察。青居智算致力于为毕业生扫清租房陷阱。
             </div>
           </div>
         </GlassCard>
       </div>
-
-      <!-- 中间：瀑布图 -->
-      <GlassCard class="md:col-span-2" title="因素贡献瀑布图" :hover="false">
-        <div v-if="loading" class="skeleton h-[260px] rounded-xl"></div>
-        <div v-else-if="result" ref="waterfallChartEl" class="h-[260px] w-full"></div>
-        <div v-else class="h-[260px] flex items-center justify-center text-sm text-slate-400">
-          点击"执行估值"查看因素贡献分析
-        </div>
-      </GlassCard>
 
       <!-- 对标样本（全宽） -->
       <GlassCard v-if="result && result.comparable_samples?.length" class="md:col-span-3" title="对标样本" :hover="false">
@@ -85,28 +103,37 @@
 
     <!-- 空状态 -->
     <EmptyState
-      v-if="!result && !loading"
-      icon="💰"
-      title="输入房源信息开始估值"
-      description="基于 Hedonic 模型计算合理租金区间，识别溢价与折价因素"
+      v-else-if="!listingId"
+      icon="🔍"
+      title="请先在房源列表选择房源"
+      description="估值引擎需要房源的特征数据（位置、面积、装修等）作为输入，点击下方按钮前往。"
+      action-text="浏览房源列表"
+      @action="$router.push('/listings')"
     />
+    <div v-else class="skeleton h-96 rounded-2xl"></div>
   </div>
 </template>
 
 <script setup>
-import { nextTick, onUnmounted, reactive, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, reactive, ref, watch, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import * as echarts from 'echarts'
 
 import GlassCard from '../components/GlassCard.vue'
 import NeonButton from '../components/NeonButton.vue'
 import Field from '../components/Field.vue'
 import EmptyState from '../components/EmptyState.vue'
-import { estimate } from '../api/qingju'
+import { estimate, getListing, estimateFairRent } from '../api/qingju'
+import { useFavoritesStore } from '../stores/favorites'
 
+const route = useRoute()
+const favoritesStore = useFavoritesStore()
+const listingId = ref(route.query.listing_id || null)
+const listing = ref(null)
 const loading = ref(false)
 const result = ref(null)
-const waterfallChartEl = ref(null)
-let waterfallChart = null
+const chartEl = ref(null)
+let chart = null
 
 const form = reactive({
   asking_rent: 5200,
@@ -119,6 +146,19 @@ const form = reactive({
   subway_distance_m: 380,
   commute_minutes: 28
 })
+
+const isFavorite = computed(() => listing.value && favoritesStore.isFavorite(listing.value.id))
+
+const toggleFavorite = () => {
+  if (!listing.value) return
+  const added = favoritesStore.toggleFavorite(listing.value)
+  window.dispatchEvent(new CustomEvent('app:toast', { 
+    detail: { 
+      type: added ? 'success' : 'info', 
+      message: added ? '已添加到收藏' : '已取消收藏' 
+    } 
+  }))
+}
 
 /**
  * 渲染因素贡献瀑布图

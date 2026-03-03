@@ -8,6 +8,9 @@
   >
     <span v-if="icon" class="text-sm leading-none">{{ icon }}</span>
     <span class="relative z-10">{{ label }}</span>
+    <span v-if="badge" class="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-sky-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-white animate-pulse-short">
+      {{ badge }}
+    </span>
   </router-link>
 </template>
 
@@ -15,6 +18,17 @@
 defineProps({
   to: { type: String, required: true },
   label: { type: String, required: true },
-  icon: { type: String, default: '' }
+  icon: { type: String, default: '' },
+  badge: { type: [String, Number], default: '' }
 })
 </script>
+
+<style>
+.animate-pulse-short {
+  animation: pulse-short 1s cubic-bezier(0.4, 0, 0.6, 1) 2;
+}
+@keyframes pulse-short {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .7; transform: scale(1.2); }
+}
+</style>
