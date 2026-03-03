@@ -68,30 +68,32 @@
         </div>
       </GlassCard>
 
-      <GlassCard title="最新房源" :hover="false">
+      <GlassCard title="最新房源" :hover="false" class="h-full flex flex-col">
         <div v-if="loading" class="space-y-3">
           <div class="skeleton h-16 rounded-2xl"></div>
           <div class="skeleton h-16 rounded-2xl"></div>
           <div class="skeleton h-16 rounded-2xl"></div>
         </div>
-        <div v-else class="space-y-3">
-          <div
-            v-for="l in summary.latest_listings"
-            :key="l.id"
-            class="rounded-2xl border border-slate-200/60 bg-slate-50 p-3 transition-all duration-200 hover:-translate-y-[1px] hover:bg-white/8"
-          >
-            <div class="flex items-start justify-between gap-3">
-              <div>
-                <div class="text-sm font-semibold">{{ l.title }}</div>
-                <div class="mt-1 text-xs text-slate-500">报价 {{ l.asking_rent }} ｜合理 {{ l.fair_low }}~{{ l.fair_high }}</div>
-              </div>
-              <div class="text-xs" :class="l.deviation_pct > 0 ? 'text-sky-500' : 'text-lime-600'">
-                {{ l.deviation_pct }}%
+        <div v-else class="flex flex-col h-full">
+          <div class="space-y-3 flex-1 overflow-y-auto max-h-[260px] pr-1">
+            <div
+              v-for="l in summary.latest_listings.slice(0, 4)"
+              :key="l.id"
+              class="rounded-2xl border border-slate-200/60 bg-slate-50 p-3 transition-all duration-200 hover:-translate-y-[1px] hover:bg-white/8"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <div class="text-sm font-semibold">{{ l.title }}</div>
+                  <div class="mt-1 text-xs text-slate-500">报价 {{ l.asking_rent }} ｜合理 {{ l.fair_low }}~{{ l.fair_high }}</div>
+                </div>
+                <div class="text-xs" :class="l.deviation_pct > 0 ? 'text-sky-500' : 'text-lime-600'">
+                  {{ l.deviation_pct }}%
+                </div>
               </div>
             </div>
           </div>
-          <div class="pt-2">
-            <NeonButton size="sm" @click="refresh">刷新数据</NeonButton>
+          <div class="pt-3 mt-auto">
+            <NeonButton size="sm" @click="refresh" class="w-full">刷新数据</NeonButton>
           </div>
         </div>
       </GlassCard>

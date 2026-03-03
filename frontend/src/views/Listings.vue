@@ -131,6 +131,9 @@
         <div class="mt-3 flex gap-2">
           <NeonButton size="sm" variant="ghost" @click="goEstimate(listing.id)">估值</NeonButton>
           <NeonButton size="sm" variant="ghost" @click="goRisk(listing.id)">风控</NeonButton>
+          <NeonButton size="sm" variant="ghost" @click="favoritesStore.toggleFavorite(listing)">
+            {{ favoritesStore.isFavorite(listing.id) ? '不收藏' : '收藏' }}
+          </NeonButton>
           <NeonButton size="sm" variant="ghost" @click="deleteListing(listing.id)">删除</NeonButton>
         </div>
       </div>
@@ -147,12 +150,14 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useFavoritesStore } from '../stores/favorites'
 
 import GlassCard from '../components/GlassCard.vue'
 import NeonButton from '../components/NeonButton.vue'
 import { listListings, deleteListing as apiDeleteListing } from '../api/qingju'
 
 const router = useRouter()
+const favoritesStore = useFavoritesStore()
 const loading = ref(false)
 const allListings = ref([])
 const viewMode = ref('grid')

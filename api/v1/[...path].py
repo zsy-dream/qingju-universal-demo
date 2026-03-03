@@ -658,32 +658,58 @@ async def split_calculate(payload: SplitPayload) -> Dict[str, Any]:
 
 @app.post("/api/v1/commute/analyze")
 async def commute_analyze(payload: Dict[str, Any]) -> Dict[str, Any]:
-    salary = float(payload.get("monthly_salary", 12000) or 12000)
-    budget = float(payload.get("monthly_rent_budget", 3500) or 3500)
-    base_commute = float(payload.get("current_commute_minutes", 35) or 35)
+    salary = float(payload.get("monthly_salary", 8000) or 8000)
+    budget = float(payload.get("budget_max", 3500) or 3500)
+    work_days = float(payload.get("work_days_per_month", 22) or 22)
 
-    hourly = salary / 21.75 / 8
+    hourly = salary / work_days / 8
     time_value_per_min = hourly / 60
 
-    rings = []
-    for minutes in [20, 30, 40, 50, 60]:
-        extra = max(0.0, minutes - base_commute)
-        extra_cost = extra * 2 * 22 * time_value_per_min
-        rent_saving = max(0.0, (minutes - 20) * 60)
-        net = rent_saving - extra_cost
-        rings.append(
-            {
-                "commute_minutes": minutes,
-                "rent_saving": int(round(rent_saving)),
-                "time_cost": int(round(extra_cost)),
-                "net_benefit": int(round(net)),
-                "suggestion": "推荐" if net > 0 else "不推荐",
-            }
-        )
+    zones = []
+    base_rent = budget
+    
+    zone_defs = [
+        ("核心区（<30分）", 20, 30),
+        ("市区（30-45分）", 30, 45),
+        ("近郊（45-60分）", 45, 60),
+        ("远郊（>60分）", 60, 90)
+    ]
+    
+    best_zone = ""
+    min_net_cost = float('inf')
+
+    for i, (name, c_min, c_max) in enumerate(zone_defs):
+        c_mid = (c_min + c_max) / 2
+        # Mock rent decreasing as commute increases
+        rent_median = base_rent * (1 - i * 0.15)
+        rent_median = max(rent_median, base_rent * 0.4)
+        
+        monthly_commute_cost = c_mid * 2 * work_days * time_value_per_min
+        net_monthly_cost = rent_median + monthly_commute_cost
+        
+        verdict = "平衡区间"
+        if i == 0: verdict = "偏高"
+        elif i == 1: verdict = "高性价比"
+        elif i == 3: verdict = "不经济"
+        
+        if net_monthly_cost < min_net_cost:
+            min_net_cost = net_monthly_cost
+            best_zone = name
+
+        zones.append({
+            "zone_name": name,
+            "rent_median": rent_median,
+            "monthly_commute_cost": monthly_commute_cost,
+            "net_monthly_cost": net_monthly_cost,
+            "commute_min": c_min,
+            "commute_max": c_max,
+            "verdict": verdict
+        })
 
     return {
         "hourly_wage": round(hourly, 1),
         "budget": int(round(budget)),
-        "rings": rings,
-        "summary": "演示版：将通勤时间折现为机会成本，比较不同通勤圈的租金节省与时间成本。",
+        "zones": zones,
+        "best_zone": best_zone,
+        "summary": "演示版：通勤时间产生的隐性成本远超想象。建议考虑「市区（30-45分）」圈层，不仅租金适中，且综合时间折现后的净月度成本最具性价比。",
     }

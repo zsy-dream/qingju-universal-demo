@@ -119,37 +119,39 @@ const form = ref({
 const packageText = computed(() => {
   if (!packageData.value) return ''
   const d = packageData.value
-  let text = `📦 ${d.title}\n`
-  text += `${'='.repeat(d.title.length + 3)}\n\n`
+  let text = `【青居智算 · 房源决策包】\n`
+  text += `🏠 目标房源：${d.title}\n`
+  text += `------------------------\n\n`
   
   if (d.estimate) {
-    text += `💰 估值分析\n`
-    text += `• 当前报价: ¥${d.estimate.asking_rent}/月\n`
-    text += `• 合理区间: ¥${d.estimate.fair_rent_low} - ¥${d.estimate.fair_rent_high}/月\n`
-    text += `• 偏离程度: ${d.estimate.deviation_pct}%\n\n`
+    text += `💰 估值结论\n`
+    text += `  • 当前报价: ¥${d.estimate.asking_rent} / 月\n`
+    text += `  • 合理区间: ¥${d.estimate.fair_rent_low} - ¥${d.estimate.fair_rent_high} / 月\n`
+    text += `  • 偏离程度: ${d.estimate.deviation_pct}\n\n`
   }
   
   if (d.risk) {
-    text += `⚠️ 风险评估: ${d.risk.level}\n`
-    text += `• 风险评分: ${d.risk.score}/200\n`
+    text += `⚠️ 风险提示 (${d.risk.level})\n`
+    text += `  • 综合评分: ${d.risk.score}/100\n`
     if (d.risk.top_risks?.length > 0) {
-      text += `• 主要风险: ${d.risk.top_risks.join('、')}\n`
+      text += `  • 核心警示: ${d.risk.top_risks.join('、')}\n`
     }
     text += `\n`
   }
   
   if (d.evidence_count !== undefined) {
-    text += `📷 证据采集: ${d.evidence_count}项\n\n`
+    text += `📷 现场证据\n`
+    text += `  • 已固定 ${d.evidence_count} 项实堪证据细节\n\n`
   }
   
   if (d.negotiation) {
-    text += `💬 议价建议\n`
-    text += `• 目标价位: ¥${d.negotiation.target_low} - ¥${d.negotiation.target_high}\n`
-    text += `• 建议报价: ¥${d.negotiation.recommended}\n\n`
+    text += `💡 议价策略\n`
+    text += `  • 理想底价: ¥${d.negotiation.target_low} / 月\n`
+    text += `  • 开口还价: ¥${d.negotiation.recommended} / 月\n\n`
   }
   
-  text += `📌 结论: ${d.conclusion || '建议实地看房后决策'}\n\n`
-  text += `—— 来自青居智算（租房防坑与真实估值系统）`
+  text += `------------------------\n`
+  text += `📌 行动建议: ${d.conclusion || '结合实勘情况谨慎决策'}`
   return text
 })
 
