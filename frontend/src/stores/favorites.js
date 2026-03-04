@@ -8,14 +8,21 @@ export const useFavoritesStore = defineStore('favorites', () => {
 
   // Load from localStorage safely
   if (typeof window !== 'undefined') {
-    favorites.value = JSON.parse(localStorage.getItem('qingju_favorites') || '[]')
-    history.value = JSON.parse(localStorage.getItem('qingju_history') || '[]')
+    try {
+      favorites.value = JSON.parse(localStorage.getItem('qingju_favorites') || '[]')
+      history.value = JSON.parse(localStorage.getItem('qingju_history') || '[]')
+    } catch (e) {
+      console.error('Failed to load favorites from localStorage', e)
+    }
   }
 
   // Getters
-  const favoriteIds = computed(() => favorites.value.map(f => f.id))
-  const isFavorite = computed(() => (id) => favoriteIds.value.includes(id))
-  const historyCount = computed(() => history.value.length)
+  // 确保 ID 统一为数值进行比较，防止 API 返回数值与前端字符串/数值不匹配
+  const favoriteIds = computed(() => favorites.value.map(f => Number(f.id)))
+
+  const isFavorite = computed(() => {
+    return (id) => favoriteIds.value.includes(Number(id))
+  })
 
   // Actions
   const saveFavorites = () => {
@@ -24,16 +31,12 @@ export const useFavoritesStore = defineStore('favorites', () => {
     }
   }
 
-  const saveHistory = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('qingju_history', JSON.stringify(history.value.slice(0, 50)))
-    }
-  }
-
   const addFavorite = (listing) => {
-    if (!isFavorite(listing.id)) {
+    const id = Number(listing.id)
+    // 使用 .value 访问 computed 返回的函数
+    if (!isFavorite.value(id)) {
       favorites.value.unshift({
-        id: listing.id,
+        id: id,
         title: listing.title,
         asking_rent: listing.asking_rent,
         city: listing.city,
@@ -42,39 +45,25 @@ export const useFavoritesStore = defineStore('favorites', () => {
         added_at: new Date().toISOString()
       })
       saveFavorites()
+      return true
     }
+    return false
   }
 
   const removeFavorite = (id) => {
-    favorites.value = favorites.value.filter(f => f.id !== id)
+    const targetId = Number(id)
+    favorites.value = favorites.value.filter(f => Number(f.id) !== targetId)
     saveFavorites()
   }
 
   const toggleFavorite = (listing) => {
-    if (isFavorite(listing.id)) {
-      removeFavorite(listing.id)
+    const id = Number(listing.id)
+    if (isFavorite.value(id)) {
+      removeFavorite(id)
       return false
     } else {
-      addFavorite(listing)
-      return true
+      return addFavorite(listing)
     }
-  }
-
-  const addHistory = (action, data) => {
-    history.value.unshift({
-      action,
-      data,
-      timestamp: new Date().toISOString()
-    })
-    if (history.value.length > 50) {
-      history.value = history.value.slice(0, 50)
-    }
-    saveHistory()
-  }
-
-  const clearHistory = () => {
-    history.value = []
-    saveHistory()
   }
 
   const clearFavorites = () => {
@@ -84,15 +73,11 @@ export const useFavoritesStore = defineStore('favorites', () => {
 
   return {
     favorites,
-    history,
     favoriteIds,
     isFavorite,
-    historyCount,
     addFavorite,
     removeFavorite,
     toggleFavorite,
-    addHistory,
-    clearHistory,
     clearFavorites
   }
 })

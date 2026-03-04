@@ -22,13 +22,13 @@
     </GlassCard>
 
     <GlassCard title="风险结论" :hover="false">
-      <div v-if="loading" class="space-y-3">
+      <div v-show="loading" class="space-y-3">
         <div class="skeleton h-10 rounded-xl"></div>
         <div class="skeleton h-24 rounded-2xl"></div>
         <div class="skeleton h-24 rounded-2xl"></div>
       </div>
 
-      <div v-else-if="result" class="space-y-4">
+      <div v-show="!loading && result" class="space-y-4">
         <!-- 综合等级 -->
         <div class="rounded-2xl border border-slate-200/60 bg-slate-50 p-4">
           <div class="text-xs tracking-widest text-slate-500">综合等级</div>
@@ -37,11 +37,11 @@
             <div class="text-xs text-slate-500">风险分：{{ result.risk_score }}/200</div>
           </div>
           <!-- 风险分可视化进度条 -->
-          <div class="mt-3 h-2 w-full rounded-full bg-slate-50 overflow-hidden">
+          <div class="mt-3 h-2 w-full rounded-full bg-slate-200 overflow-hidden">
             <div
               class="h-full rounded-full transition-all duration-700"
               :style="{ width: Math.min(result.risk_score / 200 * 100, 100) + '%' }"
-              :class="result.risk_score >= 120 ? 'bg-sky-500' : result.risk_score >= 70 ? 'bg-lime-500' : 'bg-lime-600'"
+              :class="result.risk_score >= 120 ? 'bg-sky-500 shadow-neon' : result.risk_score >= 70 ? 'bg-lime-500 shadow-neon' : 'bg-lime-600 shadow-neon'"
             ></div>
           </div>
         </div>
@@ -66,7 +66,6 @@
                 <div class="text-xs text-sky-500 font-medium">+{{ r.contribution }}</div>
               </div>
             </div>
-            <div v-if="result.top_risks.length === 0" class="text-sm text-slate-500">当前未选中明显风险信号</div>
           </div>
         </div>
 
@@ -81,7 +80,9 @@
         </div>
       </div>
 
-      <div v-else class="text-sm text-slate-600">请先设置风险信号强度并生成结论</div>
+      <div v-if="!loading && !result" class="text-sm text-slate-600 py-10 text-center italic">
+        请先设置风险信号强度并生成结论
+      </div>
     </GlassCard>
   </div>
 </template>
@@ -97,7 +98,6 @@ import { risk } from '../api/qingju'
 import { useAppStore } from '../stores/app'
 
 const appStore = useAppStore()
-
 const loading = ref(false)
 const result = ref(null)
 const radarChartEl = ref(null)
@@ -113,48 +113,57 @@ const form = reactive({
 })
 
 const levelColor = computed(() => {
-  if (!result.value) return 'text-white'
-  if (result.value.risk_level === '不建议') return 'text-sky-500'
-  if (result.value.risk_level === '谨慎') return 'text-lime-500'
-  return 'text-lime-600'
+  if (!result.value) return 'text-slate-400'
+  const score = result.value.risk_score
+  if (score >= 120) return 'text-sky-500' // 慎租/不建议
+  if (score >= 70) return 'text-lime-500' // 谨慎
+  return 'text-lime-600' // 安全
 })
 
 /**
  * 渲染六维风险雷达图
- * NOTE: 雷达图指标根据权重动态设置 max 值，信号等级越高面积越大
  */
 const renderRadarChart = () => {
-  if (!radarChartEl.value || !result.value?.radar_data?.length) return
-  if (!radarChart) radarChart = echarts.init(radarChartEl.value)
+  if (!radarChartEl.value) {
+    console.error('Radar element not found')
+    return
+  }
+  
+  // 必须重新初始化，因为元素可能由于 v-if/v-else 发生变化
+  if (radarChart) {
+    radarChart.dispose()
+    radarChart = null
+  }
+  
+  radarChart = echarts.init(radarChartEl.value)
 
-  const data = result.value.radar_data
-  // 风险信号值 × 权重 = 加权贡献值
+  const data = result.value?.radar_data || []
+  if (data.length === 0) return
+
   const indicator = data.map(d => ({
     name: d.name.replace('风险', ''),
-    max: d.max_value * d.weight
+    max: 2 * (d.weight || 20)
   }))
-  const values = data.map(d => d.value * d.weight)
-
-  // 检查是否全为0，如果是则显示最小图形
-  const hasAnyValue = values.some(v => v > 0)
+  const values = data.map(d => (d.value || 0) * (d.weight || 20))
 
   radarChart.setOption({
     backgroundColor: 'transparent',
     radar: {
       indicator,
-      center: ['50%', '52%'],
-      radius: '70%',
+      center: ['50%', '55%'],
+      radius: '65%',
       axisName: {
-        color: 'rgba(0,0,0,0.6)',
-        fontSize: 11
+        color: '#64748b',
+        fontSize: 11,
+        fontWeight: 500
       },
       splitArea: {
         areaStyle: {
-          color: ['rgba(139,92,246,0.03)', 'rgba(139,92,246,0.06)', 'rgba(139,92,246,0.09)']
+          color: ['rgba(132, 204, 22, 0.02)', 'rgba(132, 204, 22, 0.05)']
         }
       },
-      axisLine: { lineStyle: { color: 'rgba(0,0,0,0.1)' } },
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }
+      axisLine: { lineStyle: { color: 'rgba(0,0,0,0.05)' } },
+      splitLine: { lineStyle: { color: 'rgba(0,0,0,0.05)' } }
     },
     series: [{
       type: 'radar',
@@ -164,36 +173,16 @@ const renderRadarChart = () => {
         symbol: 'circle',
         symbolSize: 6,
         areaStyle: {
-          color: {
-            type: 'radial',
-            x: 0.5, y: 0.5, r: 0.5,
-            colorStops: [
-              { offset: 0, color: 'rgba(236,72,153,0.35)' },
-              { offset: 1, color: 'rgba(139,92,246,0.15)' }
-            ]
-          }
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(14, 165, 233, 0.4)' },
+            { offset: 1, color: 'rgba(132, 204, 22, 0.2)' }
+          ])
         },
         lineStyle: { color: '#0ea5e9', width: 2 },
         itemStyle: { color: '#0ea5e9', borderColor: '#fff', borderWidth: 1 }
       }]
     }]
   })
-
-  // 如果没有风险信号，显示提示
-  if (!hasAnyValue) {
-    radarChart.setOption({
-      graphic: {
-        type: 'text',
-        left: 'center',
-        top: 'center',
-        style: {
-          text: '当前无风险信号',
-          fill: 'rgba(0,0,0,0.3)',
-          fontSize: 12
-        }
-      }
-    })
-  }
 }
 
 const handleResize = () => {
@@ -203,15 +192,15 @@ const handleResize = () => {
 const run = async () => {
   loading.value = true
   try {
-    result.value = await risk({ ...form })
-    appStore.pushToast({ type: 'success', message: '风控结论已生成（含Top风险与建议动作）' })
-    await nextTick()
-    // 延迟渲染雷达图，确保DOM已更新且容器有尺寸
-    setTimeout(() => {
-      renderRadarChart()
-    }, 100)
+    const res = await risk({ ...form })
+    result.value = res
+    appStore.pushToast({ type: 'success', message: '风控评估完成' })
+  } catch (err) {
+    appStore.pushToast({ type: 'error', message: '评估失败，请重试' })
   } finally {
     loading.value = false
+    await nextTick()
+    setTimeout(renderRadarChart, 150)
   }
 }
 
@@ -219,12 +208,7 @@ const reset = () => {
   result.value = null
   radarChart?.dispose()
   radarChart = null
-  form.noise = 0
-  form.mold = 0
-  form.poor_light = 0
-  form.old_appliances = 0
-  form.sublease_risk = 0
-  form.contract_unfair = 0
+  Object.keys(form).forEach(k => form[k] = 0)
 }
 
 onMounted(() => {
