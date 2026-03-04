@@ -3,8 +3,14 @@ import { ref, computed } from 'vue'
 
 export const useFavoritesStore = defineStore('favorites', () => {
   // State
-  const favorites = ref(JSON.parse(localStorage.getItem('qingju_favorites') || '[]'))
-  const history = ref(JSON.parse(localStorage.getItem('qingju_history') || '[]'))
+  const favorites = ref([])
+  const history = ref([])
+
+  // Load from localStorage safely
+  if (typeof window !== 'undefined') {
+    favorites.value = JSON.parse(localStorage.getItem('qingju_favorites') || '[]')
+    history.value = JSON.parse(localStorage.getItem('qingju_history') || '[]')
+  }
 
   // Getters
   const favoriteIds = computed(() => favorites.value.map(f => f.id))
@@ -13,11 +19,15 @@ export const useFavoritesStore = defineStore('favorites', () => {
 
   // Actions
   const saveFavorites = () => {
-    localStorage.setItem('qingju_favorites', JSON.stringify(favorites.value))
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('qingju_favorites', JSON.stringify(favorites.value))
+    }
   }
 
   const saveHistory = () => {
-    localStorage.setItem('qingju_history', JSON.stringify(history.value.slice(0, 50)))
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('qingju_history', JSON.stringify(history.value.slice(0, 50)))
+    }
   }
 
   const addFavorite = (listing) => {
