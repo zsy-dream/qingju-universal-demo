@@ -161,6 +161,9 @@ import GlassCard from '../components/GlassCard.vue'
 import NeonButton from '../components/NeonButton.vue'
 import { listListings, deleteListing as apiDeleteListing } from '../api/qingju'
 
+import { useAppStore } from '../stores/app'
+
+const appStore = useAppStore()
 const router = useRouter()
 const favoritesStore = useFavoritesStore()
 const loading = ref(false)
@@ -287,13 +290,13 @@ const handleToggleFavorite = (listing) => {
   const isNowFavorite = favoritesStore.toggleFavorite(listing)
   const message = isNowFavorite ? '已加入收藏夹' : '已取消收藏'
   const type = isNowFavorite ? 'success' : 'info'
-  window.dispatchEvent(new CustomEvent('app:toast', { detail: { type, message } }))
+  appStore.pushToast({ type, message })
 }
 
 const deleteListing = async (id) => {
   if (!confirm('确定删除此房源？')) return
   await apiDeleteListing(id)
-  window.dispatchEvent(new CustomEvent('app:toast', { detail: { type: 'success', message: '已删除' } }))
+  appStore.pushToast({ type: 'success', message: '已删除' })
   await loadListings()
 }
 

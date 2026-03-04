@@ -118,8 +118,15 @@ import {
 import { useFavoritesStore } from '../stores/favorites'
 
 const router = useRouter()
+import { useAppStore } from '../stores/app'
+
+const appStore = useAppStore()
 const favoritesStore = useFavoritesStore()
 const loadingDemo = ref(false)
+
+const onToast = (message, type = 'info') => {
+  appStore.pushToast({ message, type })
+}
 
 const seedDemo = async () => {
   if (loadingDemo.value) return
@@ -314,12 +321,7 @@ const seedDemo = async () => {
 
   // 最终提示
   const totalModules = 9
-  window.dispatchEvent(new CustomEvent('app:toast', { 
-    detail: { 
-      type: 'success', 
-      message: `✅ 演示数据初始化完成！\n🏠 房源：${successCount}套 | 📊 估值：${listingsToEstimate.length}套 | 🛡️ 风控：${riskAssessments.length}套\n📷 证据：${evidenceTemplates.length}条 | ⚠️ 问题：${issues.length}条 | ⚖️ 对比：1组\n⚡ 分摊：1组 | 🤝 议价：${negotiateListings.length}套 | 📝 合同：1份` 
-    } 
-  }))
+  onToast(`✅ 演示数据初始化完成！\n🏠 房源：${successCount}套 | 📊 估值：${listingsToEstimate.length}套 | 🛡️ 风控：${riskAssessments.length}套\n📷 证据：${evidenceTemplates.length}条 | ⚠️ 问题：${issues.length}条 | ⚖️ 对比：1组\n⚡ 分摊：1组 | 🤝 议价：${negotiateListings.length}套 | 📝 合同：1份`, 'success')
   router.push('/listings')
 
   } finally {

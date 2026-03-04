@@ -94,6 +94,9 @@ import GlassCard from '../components/GlassCard.vue'
 import NeonButton from '../components/NeonButton.vue'
 import Signal from '../components/Signal.vue'
 import { risk } from '../api/qingju'
+import { useAppStore } from '../stores/app'
+
+const appStore = useAppStore()
 
 const loading = ref(false)
 const result = ref(null)
@@ -201,7 +204,7 @@ const run = async () => {
   loading.value = true
   try {
     result.value = await risk({ ...form })
-    window.dispatchEvent(new CustomEvent('app:toast', { detail: { type: 'success', message: '风控结论已生成（含Top风险与建议动作）' } }))
+    appStore.pushToast({ type: 'success', message: '风控结论已生成（含Top风险与建议动作）' })
     await nextTick()
     // 延迟渲染雷达图，确保DOM已更新且容器有尺寸
     setTimeout(() => {

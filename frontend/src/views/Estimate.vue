@@ -185,7 +185,9 @@ import Field from '../components/Field.vue'
 import EmptyState from '../components/EmptyState.vue'
 import { estimate, getListing } from '../api/qingju'
 import { useFavoritesStore } from '../stores/favorites'
+import { useAppStore } from '../stores/app'
 
+const appStore = useAppStore()
 const route = useRoute()
 const favoritesStore = useFavoritesStore()
 const listingId = ref(route.query.listing_id || null)
@@ -213,12 +215,10 @@ const isFavorite = computed(() => listing.value && favoritesStore.isFavorite(lis
 const toggleFavorite = () => {
   if (!listing.value) return
   const added = favoritesStore.toggleFavorite(listing.value)
-  window.dispatchEvent(new CustomEvent('app:toast', { 
-    detail: { 
-      type: added ? 'success' : 'info', 
-      message: added ? '已添加到收藏' : '已取消收藏' 
-    } 
-  }))
+  appStore.pushToast({ 
+    type: added ? 'success' : 'info', 
+    message: added ? '已添加到收藏' : '已取消收藏' 
+  })
 }
 
 const renderWaterfallChart = () => {
@@ -307,7 +307,7 @@ const run = async () => {
     result.value = await estimate({ ...form })
     await nextTick()
     renderWaterfallChart()
-    window.dispatchEvent(new CustomEvent('app:toast', { detail: { type: 'success', message: '估值已生成' } }))
+    appStore.pushToast({ type: 'success', message: '估值已生成' })
   } catch (e) {
     console.error(e)
   } finally {

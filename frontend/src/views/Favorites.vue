@@ -88,6 +88,9 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFavoritesStore } from '../stores/favorites'
+import { useAppStore } from '../stores/app'
+
+const appStore = useAppStore()
 
 import GlassCard from '../components/GlassCard.vue'
 import NeonButton from '../components/NeonButton.vue'
@@ -104,13 +107,13 @@ const formatDate = (dateStr) => {
 
 const remove = (id) => {
   favoritesStore.removeFavorite(id)
-  window.dispatchEvent(new CustomEvent('app:toast', { detail: { type: 'info', message: '已移除收藏' } }))
+  appStore.pushToast({ type: 'info', message: '已移除收藏' })
 }
 
 const clearAll = () => {
   if (confirm('确定清空所有收藏？')) {
     favoritesStore.clearFavorites()
-    window.dispatchEvent(new CustomEvent('app:toast', { detail: { type: 'info', message: '收藏已清空' } }))
+    appStore.pushToast({ type: 'info', message: '收藏已清空' })
   }
 }
 
@@ -129,7 +132,7 @@ const toggleCompareSelection = (id) => {
   } else if (compareSelection.value.length < 6) {
     compareSelection.value.push(id)
   } else {
-    window.dispatchEvent(new CustomEvent('app:toast', { detail: { type: 'warning', message: '最多选择6套对比' } }))
+    appStore.pushToast({ type: 'warning', message: '最多选择6套对比' })
   }
 }
 
@@ -139,7 +142,7 @@ const startCompare = () => {
 
 const exportFavorites = () => {
   if (favoritesStore.favorites.length === 0) {
-    window.dispatchEvent(new CustomEvent('app:toast', { detail: { type: 'warning', message: '收藏列表为空' } }))
+    appStore.pushToast({ type: 'warning', message: '收藏列表为空' })
     return
   }
   const text = favoritesStore.favorites.map(f =>
@@ -157,6 +160,6 @@ const exportFavorites = () => {
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
   
-  window.dispatchEvent(new CustomEvent('app:toast', { detail: { type: 'success', message: '收藏列表已导出' } }))
+  appStore.pushToast({ type: 'success', message: '收藏列表已导出' })
 }
 </script>
