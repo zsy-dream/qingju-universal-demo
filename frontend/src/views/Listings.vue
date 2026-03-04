@@ -108,24 +108,24 @@
               <span class="truncate font-semibold">{{ listing.title }}</span>
             </div>
             <div class="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
-              <span>{{ listing.city }}·{{ listing.district }}</span>
+              <span>{{ listing.city || '-' }}·{{ listing.district || '-' }}</span>
               <span>•</span>
-              <span>{{ listing.area_sqm }}㎡</span>
+              <span>{{ listing.area_sqm ? listing.area_sqm + '㎡' : '面积未填' }}</span>
               <span>•</span>
-              <span>{{ listing.layout }}</span>
+              <span>{{ listing.layout || '户型未填' }}</span>
             </div>
           </div>
           <div class="text-right">
             <div class="text-lg font-semibold text-lime-600">¥{{ listing.asking_rent }}</div>
-            <div class="text-xs text-slate-400">{{ Math.round(listing.asking_rent / listing.area_sqm) }}元/㎡</div>
+            <div class="text-xs text-slate-400">{{ listing.area_sqm ? Math.round(listing.asking_rent / listing.area_sqm) + '元/㎡' : '单价未知' }}</div>
           </div>
         </div>
 
         <div class="mt-3 flex flex-wrap gap-1">
-          <span class="rounded-full border border-slate-200/60 bg-slate-50 px-2 py-0.5 text-[10px] text-slate-500">{{ listing.orientation }}</span>
-          <span class="rounded-full border border-slate-200/60 bg-slate-50 px-2 py-0.5 text-[10px] text-slate-500">{{ listing.decoration }}</span>
+          <span class="rounded-full border border-slate-200/60 bg-slate-50 px-2 py-0.5 text-[10px] text-slate-500">{{ listing.orientation || '朝向未填' }}</span>
+          <span class="rounded-full border border-slate-200/60 bg-slate-50 px-2 py-0.5 text-[10px] text-slate-500">{{ listing.decoration || '装修未填' }}</span>
           <span v-if="listing.has_elevator" class="rounded-full border border-lime-200 bg-lime-100 px-2 py-0.5 text-[10px] text-lime-700">电梯</span>
-          <span class="rounded-full border border-slate-200/60 bg-slate-50 px-2 py-0.5 text-[10px] text-slate-500">{{ listing.commute_minutes }}分钟通勤</span>
+          <span class="rounded-full border border-slate-200/60 bg-slate-50 px-2 py-0.5 text-[10px] text-slate-500">{{ listing.commute_minutes ? listing.commute_minutes + '分钟通勤' : '通勤未填' }}</span>
         </div>
 
         <div class="mt-3 flex gap-2">

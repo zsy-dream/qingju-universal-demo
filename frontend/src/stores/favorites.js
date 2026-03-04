@@ -14,7 +14,7 @@ export const useFavoritesStore = defineStore('favorites', () => {
 
   // Getters
   const favoriteIds = computed(() => favorites.value.map(f => f.id))
-  const isFavorite = (id) => favoriteIds.value.includes(id)
+  const isFavorite = computed(() => (id) => favoriteIds.value.includes(id))
   const historyCount = computed(() => history.value.length)
 
   // Actions

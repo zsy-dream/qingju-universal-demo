@@ -138,10 +138,25 @@ const startCompare = () => {
 }
 
 const exportFavorites = () => {
+  if (favoritesStore.favorites.length === 0) {
+    window.dispatchEvent(new CustomEvent('app:toast', { detail: { type: 'warning', message: '收藏列表为空' } }))
+    return
+  }
   const text = favoritesStore.favorites.map(f =>
     `#${f.id} ${f.title} | ¥${f.asking_rent} | ${f.city}·${f.district} | ${f.area_sqm}㎡`
   ).join('\n')
-  navigator.clipboard.writeText(text)
-  window.dispatchEvent(new CustomEvent('app:toast', { detail: { type: 'success', message: '收藏列表已复制' } }))
+  
+  // 创建下载文件
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `收藏列表_${new Date().toLocaleDateString()}.txt`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+  
+  window.dispatchEvent(new CustomEvent('app:toast', { detail: { type: 'success', message: '收藏列表已导出' } }))
 }
 </script>

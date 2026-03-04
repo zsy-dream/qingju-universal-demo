@@ -87,7 +87,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onUnmounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
 import * as echarts from 'echarts'
 
 import GlassCard from '../components/GlassCard.vue'
@@ -132,6 +132,9 @@ const renderRadarChart = () => {
   }))
   const values = data.map(d => d.value * d.weight)
 
+  // 检查是否全为0，如果是则显示最小图形
+  const hasAnyValue = values.some(v => v > 0)
+
   radarChart.setOption({
     backgroundColor: 'transparent',
     radar: {
@@ -172,6 +175,26 @@ const renderRadarChart = () => {
       }]
     }]
   })
+
+  // 如果没有风险信号，显示提示
+  if (!hasAnyValue) {
+    radarChart.setOption({
+      graphic: {
+        type: 'text',
+        left: 'center',
+        top: 'center',
+        style: {
+          text: '当前无风险信号',
+          fill: 'rgba(0,0,0,0.3)',
+          fontSize: 12
+        }
+      }
+    })
+  }
+}
+
+const handleResize = () => {
+  radarChart?.resize()
 }
 
 const run = async () => {
@@ -201,7 +224,12 @@ const reset = () => {
   form.contract_unfair = 0
 }
 
+onMounted(() => {
+  window.addEventListener('resize', handleResize)
+})
+
 onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
   radarChart?.dispose()
 })
 </script>

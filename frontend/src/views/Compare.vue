@@ -168,7 +168,7 @@
 </template>
 
 <script setup>
-import { nextTick, onUnmounted, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import * as echarts from 'echarts'
 
 import GlassCard from '../components/GlassCard.vue'
@@ -359,7 +359,17 @@ const reset = () => {
   radarChart = null
 }
 
+const handleResize = () => {
+  scoreBarChart?.resize()
+  radarChart?.resize()
+}
+
+onMounted(() => {
+  window.addEventListener('resize', handleResize)
+})
+
 onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
   scoreBarChart?.dispose()
   radarChart?.dispose()
 })
